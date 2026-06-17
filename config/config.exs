@@ -11,6 +11,10 @@ config :api_harness,
   ecto_repos: [ApiHarness.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# Register the pgvector Postgrex extension so `vector` columns round-trip
+# through Ecto (see lib/api_harness/postgrex_types.ex).
+config :api_harness, ApiHarness.Repo, types: ApiHarness.PostgrexTypes
+
 # Configure the endpoint
 config :api_harness, ApiHarnessWeb.Endpoint,
   url: [host: "localhost"],
@@ -38,6 +42,26 @@ config :logger, :default_formatter,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# LLM provider configuration. The provider module is swappable so tests can
+# inject a stub (see config/test.exs). Secrets (`api_key`) are filled from the
+# environment in config/runtime.exs.
+config :api_harness, ApiHarness.LLM,
+  provider: ApiHarness.LLM.OpenAI,
+  chat_model: "gpt-4o-mini",
+  embedding_model: "text-embedding-3-small",
+  base_url: "https://api.openai.com/v1",
+  api_key: nil
+
+# Agent runtime tuning. `recent_messages_window` bounds layer 5 of the prompt
+# (ContextBuilder) — the number of recent conversation turns included.
+config :api_harness, :agent, recent_messages_window: 10
+
+# Default JWT signing secret for dev/test. Overridden at runtime from
+# JWT_SECRET (config/runtime.exs) in any environment where it is set.
+config :api_harness,
+       :jwt_secret,
+       "dev_test_insecure_jwt_secret_please_override_via_env_0123456789abcdef"
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

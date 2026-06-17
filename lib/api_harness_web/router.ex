@@ -5,8 +5,25 @@ defmodule ApiHarnessWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :api_auth do
+    plug :accepts, ["json"]
+    plug ApiHarnessWeb.Plugs.Authenticate
+  end
+
+  # Public endpoints — no authentication required.
   scope "/api", ApiHarnessWeb do
     pipe_through :api
+
+    post "/login", AuthController, :login
+  end
+
+  # Protected endpoints — JWT required (assigns current_user).
+  scope "/api", ApiHarnessWeb do
+    pipe_through :api_auth
+
+    resources "/chats", ChatController, only: [:index, :create, :show] do
+      post "/messages", MessageController, :create, as: :message
+    end
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

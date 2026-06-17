@@ -23,6 +23,9 @@ config :api_harness, ApiHarnessWeb.Endpoint,
 # In test we don't send emails
 config :api_harness, ApiHarness.Mailer, adapter: Swoosh.Adapters.Test
 
+# Use the in-memory LLM stub in tests — no live OpenAI calls (Test Discipline).
+config :api_harness, ApiHarness.LLM, provider: ApiHarness.LLMStub
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 

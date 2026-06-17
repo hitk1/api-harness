@@ -12,6 +12,13 @@ defmodule ApiHarnessWeb.ErrorJSON do
   #   %{errors: %{detail: "Internal Server Error"}}
   # end
 
+  # Friendly messages for the statuses used by this API (auth/agent paths).
+  def render("401.json", _assigns), do: %{errors: %{detail: "unauthenticated"}}
+  def render("404.json", _assigns), do: %{errors: %{detail: "not found"}}
+  def render("422.json", _assigns), do: %{errors: %{detail: "could not interpret request"}}
+  def render("502.json", _assigns), do: %{errors: %{detail: "ai provider unavailable"}}
+  def render("503.json", _assigns), do: %{errors: %{detail: "ai provider unavailable"}}
+
   # By default, Phoenix returns the status message from
   # the template name. For example, "404.json" becomes
   # "Not Found".

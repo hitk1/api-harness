@@ -1,4 +1,43 @@
 import Config
+import Dotenvy
+
+# Load `.env` (and `.env.<env>`) into the runtime config if present. Real OS
+# environment variables take precedence (listed last). Missing files are
+# skipped. `.env` is git-ignored; `.env.example` documents the required keys.
+env_files = Enum.filter([".env", ".env.#{config_env()}"], &File.exists?/1)
+source!(env_files ++ [System.get_env()])
+
+# OpenAI credentials (read from env in every environment; tests use the stub
+# provider and never read this).
+config :api_harness, ApiHarness.LLM, api_key: env!("OPENAI_API_KEY", :string, nil)
+
+# Override the JWT signing secret from the environment when provided
+# (mandatory in production; falls back to the dev/test default otherwise).
+if jwt_secret = env!("JWT_SECRET", :string, nil) do
+  config :api_harness, :jwt_secret, jwt_secret
+end
+
+# Apply DATABASE_URL for dev/test when set via .env (overrides hardcoded
+# credentials in dev.exs/test.exs). Prod applies it in the :prod block below.
+if config_env() != :prod do
+  if database_url = env!("DATABASE_URL", :string, nil) do
+    config :api_harness, ApiHarness.Repo, url: database_url
+
+    # Test DB gets a derived name so it doesn't collide with dev.
+    if config_env() == :test do
+      test_url =
+        database_url
+        |> URI.parse()
+        |> Map.update!(:path, fn path ->
+          base = Path.basename(path || "api_harness")
+          "/#{base}_test#{System.get_env("MIX_TEST_PARTITION")}"
+        end)
+        |> URI.to_string()
+
+      config :api_harness, ApiHarness.Repo, url: test_url
+    end
+  end
+end
 
 # config/runtime.exs is executed for all environments, including
 # during releases. It is executed after compilation and before the

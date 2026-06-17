@@ -12,8 +12,9 @@ defmodule ApiHarness.Application do
       ApiHarness.Repo,
       {DNSCluster, query: Application.get_env(:api_harness, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: ApiHarness.PubSub},
-      # Start a worker by calling: ApiHarness.Worker.start_link(arg)
-      # {ApiHarness.Worker, arg},
+      # Async memory pipeline: Registry + DynamicSupervisor (one worker per interaction).
+      ApiHarness.Memory.Pipeline.Registry,
+      ApiHarness.Memory.Pipeline.Supervisor,
       # Start to serve requests, typically the last entry
       ApiHarnessWeb.Endpoint
     ]
