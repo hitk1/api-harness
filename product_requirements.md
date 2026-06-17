@@ -4,8 +4,8 @@ A regra de negócio deste endpoint Deve ser responsável por Responder as dúvid
 
 ## Features
 - A aplicação deve Exportar o módulo de usuário para fazer o crud e manutenção de novos usuários (quero poder usar o o REPL do elixir para fazer esse cadastramento)
-- Ter um ednpoint para receber as mensagens do usuário e aplicar as técnicas de engenharia que serão discutidas mais à frente . 
-- Atualizar constantemente os dados em banco de dados com base na interação dos usuários . 
+- Ter um ednpoint para receber as mensagens do usuário e aplicar as técnicas de engenharia que serão discutidas mais à frente (esta feature deve contemplar a criação de sessões ou thread do usuário, ou seja, eu como usuário quero poder escolher em qual thread vou vou iteragir também - log devera ter um modulo de gestão dessas sessões, se precisar pode ser no mesmo formato do item anterior) 
+- Atualizar constantemente os dados em banco de dados com base na interação dos usuários .
 
 ## Persistência de dados
 Esta aplicação fará uso do postgres Como banco de dados e deve ser capaz de fazer a modelagem dos dados , seguindo O contexto da aplicação. Neste caso , Algumas tabelas de exemplo são:
