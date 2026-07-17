@@ -15,6 +15,10 @@ defmodule ApiHarness.Application do
       # Async memory pipeline: Registry + DynamicSupervisor (one worker per interaction).
       ApiHarness.Memory.Pipeline.Registry,
       ApiHarness.Memory.Pipeline.Supervisor,
+      # Session-memory pipeline (spec 002): a single static Coordinator (no
+      # DynamicSupervisor) dispatching per-thread jobs onto this Task.Supervisor.
+      {Task.Supervisor, name: ApiHarness.Memory.SessionMemory.TaskSupervisor},
+      ApiHarness.Memory.SessionMemory.Coordinator,
       # Start to serve requests, typically the last entry
       ApiHarnessWeb.Endpoint
     ]

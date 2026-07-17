@@ -49,12 +49,43 @@ defmodule ApiHarness.Agent.ContextBuilderTest do
       assert Enum.any?(contents, &(&1 =~ "Msg"))
     end
 
-    test "session memory state is included in system message", %{user: user, chat: chat} do
-      Memory.update_session_memory(chat.id, %{"topic" => "trabalhista"})
+    test "categorized session memory is rendered as legible labeled sections, ids omitted", %{
+      user: user,
+      chat: chat
+    } do
+      {:ok, _} =
+        Memory.apply_session_reconciliation(chat.id, %{
+          "action" => "create",
+          "kind" => "fact",
+          "content" => "Cliente: João Silva"
+        })
+
+      {:ok, _} =
+        Memory.apply_session_reconciliation(chat.id, %{
+          "action" => "create",
+          "kind" => "goal",
+          "content" => "Determinar prazo prescricional"
+        })
 
       messages = ContextBuilder.build(user, chat, "Pergunta")
       system_content = List.first(messages).content
-      assert system_content =~ "trabalhista"
+
+      assert system_content =~ "Goal"
+      assert system_content =~ "Determinar prazo prescricional"
+      assert system_content =~ "Facts"
+      assert system_content =~ "Cliente: João Silva"
+
+      entry_id = hd(Memory.get_session_memory(chat.id).state["fact"])["id"]
+      refute system_content =~ entry_id
+    end
+
+    test "returns no session context section when session memory is empty", %{
+      user: user,
+      chat: chat
+    } do
+      messages = ContextBuilder.build(user, chat, "Pergunta")
+      system_content = List.first(messages).content
+      refute system_content =~ "Current Session Context"
     end
   end
 end

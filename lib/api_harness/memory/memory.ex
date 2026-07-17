@@ -2,8 +2,12 @@ defmodule ApiHarness.Memory do
   @moduledoc """
   Memory context API — session memory and persistent memory operations (US4).
 
-  Session memory is scoped per chat thread (FR-014). Persistent memory is
-  per-user and managed by the async pipeline (FR-016, FR-017).
+  Session memory is scoped per chat thread (FR-014) and, since spec 002,
+  categorized into goal/fact/constraint/preference entries reconciled by
+  `ApiHarness.Memory.SessionReconciler` and applied via
+  `apply_session_reconciliation/2` — see
+  `specs/002-session-memory-categorization/data-model.md`. Persistent memory
+  is per-user and managed by the async pipeline (FR-016, FR-017).
   """
   import Ecto.Query
 
@@ -33,6 +37,62 @@ defmodule ApiHarness.Memory do
         |> SessionMemory.changeset(%{state: Map.merge(existing.state, new_state)})
         |> Repo.update()
     end
+  end
+
+  @doc """
+  Apply a session-memory reconciliation decision (`ApiHarness.Memory.SessionReconciler`)
+  to `chat_id`'s categorized `state[kind]` (spec 002, FR-003). Mirrors
+  `apply_reconciliation/2` for persistent memory, but targets one category/entry
+  within the single `session_memories` jsonb row instead of a separate table row
+  (data-model.md).
+
+  `candidate` MUST have `"action"` (`create | update | merge | discard`) and
+  `"kind"` keys; `"update"`/`"merge"` also require an `"id"` targeting the
+  existing entry, and all but `"discard"` require `"content"`.
+  """
+  @spec apply_session_reconciliation(integer(), map()) ::
+          {:ok, SessionMemory.t()} | {:error, Ecto.Changeset.t()}
+  def apply_session_reconciliation(chat_id, %{"action" => action, "kind" => kind} = candidate) do
+    case get_session_memory(chat_id) do
+      nil ->
+        new_state = apply_session_action(%{}, kind, action, candidate)
+
+        %SessionMemory{chat_id: chat_id}
+        |> SessionMemory.changeset(%{state: new_state})
+        |> Repo.insert()
+
+      existing ->
+        new_state = apply_session_action(existing.state, kind, action, candidate)
+
+        existing
+        |> SessionMemory.changeset(%{state: new_state})
+        |> Repo.update()
+    end
+  end
+
+  defp apply_session_action(state, kind, action, candidate) do
+    entries = Map.get(state, kind, [])
+
+    new_entries =
+      case action do
+        "create" ->
+          entries ++ [%{"id" => Ecto.UUID.generate(), "content" => candidate["content"]}]
+
+        action when action in ["update", "merge"] ->
+          replace_session_entry(entries, candidate["id"], candidate["content"])
+
+        _ ->
+          entries
+      end
+
+    Map.put(state, kind, new_entries)
+  end
+
+  defp replace_session_entry(entries, id, content) do
+    Enum.map(entries, fn
+      %{"id" => ^id} = entry -> Map.put(entry, "content", content)
+      entry -> entry
+    end)
   end
 
   # ---------------------------------------------------------------------------

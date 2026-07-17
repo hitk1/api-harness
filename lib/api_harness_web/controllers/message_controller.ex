@@ -4,6 +4,7 @@ defmodule ApiHarnessWeb.MessageController do
   alias ApiHarness.Agent.Runtime
   alias ApiHarness.Chats
   alias ApiHarness.Memory.Pipeline.Supervisor, as: PipelineSupervisor
+  alias ApiHarness.Memory.SessionMemory.Coordinator, as: SessionMemoryCoordinator
 
   action_fallback ApiHarnessWeb.FallbackController
 
@@ -20,7 +21,7 @@ defmodule ApiHarnessWeb.MessageController do
 
         chat ->
           with {:ok, assistant_msg} <- Runtime.run(user, chat, content) do
-            dispatch_pipeline(user, chat, assistant_msg)
+            dispatch_pipeline(user, chat, content, assistant_msg)
             render(conn, :create, message: assistant_msg)
           else
             {:error, :planner_failed} -> {:error, :planner_failed}
@@ -30,9 +31,13 @@ defmodule ApiHarnessWeb.MessageController do
     end
   end
 
-  defp dispatch_pipeline(user, chat, assistant_msg) do
+  # Dispatches both memory pipelines off the response path (fire-and-forget):
+  # the existing persistent-memory pipeline, and the categorized session-memory
+  # update (spec 002, FR-006) via the single Coordinator singleton.
+  defp dispatch_pipeline(user, chat, question, assistant_msg) do
     interaction = %{user_id: user.id, chat_id: chat.id, message: assistant_msg}
     PipelineSupervisor.start_worker(interaction)
+    SessionMemoryCoordinator.enqueue(chat.id, user.id, question, assistant_msg.content)
   rescue
     _ -> :ok
   end

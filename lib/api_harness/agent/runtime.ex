@@ -10,16 +10,17 @@ defmodule ApiHarness.Agent.Runtime do
     5. Persist assistant message
     6. Return `{:ok, message}`
 
-  After returning, the caller (MessageController) dispatches the async memory
-  pipeline (fire-and-forget — FR-023, SC-002). The pipeline is never started here
-  to keep the response path free of pipeline failures.
+  After returning, the caller (MessageController) dispatches both async memory
+  pipelines (fire-and-forget — FR-023, SC-002, and spec 002 FR-006): the
+  persistent-memory pipeline, and the categorized session-memory update via
+  `ApiHarness.Memory.SessionMemory.Coordinator.enqueue/4`. Neither pipeline is
+  started here, keeping the response path free of their failures.
   """
 
   alias ApiHarness.Accounts.User
   alias ApiHarness.Agent.{ContextBuilder, Executor, Planner}
   alias ApiHarness.Chats
   alias ApiHarness.Chats.Chat
-  alias ApiHarness.Memory
 
   require Logger
 
@@ -37,13 +38,6 @@ defmodule ApiHarness.Agent.Runtime do
          {:ok, steps} <- Planner.plan(messages),
          {:ok, answer} <- Executor.execute(steps, messages),
          {:ok, assistant_msg} <- Chats.add_message(chat, "assistant", answer) do
-      # Update session memory with the latest turn summary (FR-014, T051).
-      # Best-effort: errors are logged but don't affect the response.
-      Memory.update_session_memory(chat.id, %{
-        "last_question" => question,
-        "last_answer" => answer
-      })
-
       {:ok, assistant_msg}
     else
       {:error, :planner_failed} ->

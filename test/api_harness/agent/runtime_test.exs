@@ -59,5 +59,15 @@ defmodule ApiHarness.Agent.RuntimeTest do
       assert "user" in roles
       assert "assistant" in roles
     end
+
+    test "Runtime.run/3 no longer touches session memory itself (moved to the async Coordinator pipeline, spec 002 US4)",
+         %{user: user, chat: chat} do
+      assert {:ok, _} = Runtime.run(user, chat, "Qual o prazo prescricional?")
+
+      # Runtime.run/3 leaves session memory exactly as Chats.create_chat/2
+      # initialized it — categorization now happens off the request path,
+      # dispatched by MessageController (see message_controller_test.exs).
+      assert ApiHarness.Memory.get_session_memory(chat.id).state == %{}
+    end
   end
 end

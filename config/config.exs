@@ -57,6 +57,12 @@ config :api_harness, ApiHarness.LLM,
 # (ContextBuilder) — the number of recent conversation turns included.
 config :api_harness, :agent, recent_messages_window: 10
 
+# Session-memory pipeline (spec 002). `topic` is the Phoenix.PubSub topic the
+# Coordinator subscribes to and MessageController broadcasts turn events on.
+# `max_concurrency` bounds how many distinct chat_ids the Coordinator processes
+# at once (a given chat_id is always processed one turn at a time).
+config :api_harness, :session_memory, topic: "session_memory:updates", max_concurrency: 10
+
 # Default JWT signing secret for dev/test. Overridden at runtime from
 # JWT_SECRET (config/runtime.exs) in any environment where it is set.
 config :api_harness,

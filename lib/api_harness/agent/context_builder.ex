@@ -29,6 +29,16 @@ defmodule ApiHarness.Agent.ContextBuilder do
   requires consultation with a qualified attorney.
   """
 
+  # Session memory `state` category keys (spec 002, data-model.md) rendered as
+  # labeled sections in that order, using only each entry's `content` — internal
+  # `id`s are never leaked into the prompt.
+  @session_category_labels [
+    {"goal", "Goal"},
+    {"fact", "Facts"},
+    {"constraint", "Constraints"},
+    {"preference", "Preferences"}
+  ]
+
   @doc """
   Build the prompt message list for `user`, `chat`, and the current `question`.
   Returns a list of `%{role: ..., content: ...}` maps ready for the LLM.
@@ -64,12 +74,9 @@ defmodule ApiHarness.Agent.ContextBuilder do
       end
 
     parts =
-      case session_memory do
-        %{state: state} when map_size(state) > 0 ->
-          parts ++ ["\n## Current Session Context\n#{Jason.encode!(state)}"]
-
-        _ ->
-          parts
+      case render_session_memory(session_memory) do
+        nil -> parts
+        rendered -> parts ++ ["\n## Current Session Context\n#{rendered}"]
       end
 
     parts =
@@ -82,6 +89,26 @@ defmodule ApiHarness.Agent.ContextBuilder do
 
     Enum.join(parts, "\n")
   end
+
+  # Layer 3 (spec 002, FR-005): render each non-empty category as a labeled
+  # section built from entry `content` only. Returns `nil` when there is
+  # nothing to render (no session memory yet, or all categories empty).
+  defp render_session_memory(%{state: state}) when map_size(state) > 0 do
+    sections =
+      for {key, label} <- @session_category_labels,
+          entries = Map.get(state, key, []),
+          entries != [] do
+        contents = Enum.map_join(entries, "\n", &"- #{&1["content"]}")
+        "**#{label}:**\n#{contents}"
+      end
+
+    case sections do
+      [] -> nil
+      _ -> Enum.join(sections, "\n")
+    end
+  end
+
+  defp render_session_memory(_), do: nil
 
   # Layer 4 (FR-022-A): retrieve user + task category memories by semantic similarity.
   # Falls back to all memories in those categories if pgvector retrieval fails
