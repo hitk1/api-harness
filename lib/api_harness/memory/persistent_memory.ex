@@ -20,6 +20,7 @@ defmodule ApiHarness.Memory.PersistentMemory do
     field :content, :string
     field :metadata, :map, default: %{}
     field :embedding, Pgvector.Ecto.Vector
+    field :token_count, :integer, default: 0
 
     belongs_to :user, User
 

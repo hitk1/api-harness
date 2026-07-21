@@ -9,6 +9,12 @@ defmodule ApiHarness.Chats.Chat do
 
   schema "chats" do
     field :title, :string
+    field :context_status, :string, default: "active"
+    field :rolling_summary, :string
+    field :rolling_summary_token_count, :integer, default: 0
+    field :total_context_tokens, :integer, default: 0
+    field :compaction_count, :integer, default: 0
+    field :last_compaction_at, :utc_datetime
 
     belongs_to :user, User
     has_many :messages, ApiHarness.Chats.Message

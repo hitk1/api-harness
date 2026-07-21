@@ -132,15 +132,25 @@ defmodule ApiHarness.Memory do
   end
 
   defp create_persistent_memory(user_id, candidate) do
-    %PersistentMemory{user_id: user_id}
+    tc = ApiHarness.LLM.TokenCounter.count(candidate["content"] || "")
+
+    %PersistentMemory{user_id: user_id, token_count: tc}
     |> PersistentMemory.changeset(candidate)
     |> Repo.insert()
   end
 
   defp update_persistent_memory(%{"id" => id} = candidate) do
     case Repo.get(PersistentMemory, id) do
-      nil -> {:error, :not_found}
-      pm -> pm |> PersistentMemory.changeset(candidate) |> Repo.update()
+      nil ->
+        {:error, :not_found}
+
+      pm ->
+        tc = ApiHarness.LLM.TokenCounter.count(candidate["content"] || pm.content)
+
+        pm
+        |> Ecto.Changeset.change(%{token_count: tc})
+        |> PersistentMemory.changeset(candidate)
+        |> Repo.update()
     end
   end
 
@@ -153,7 +163,12 @@ defmodule ApiHarness.Memory do
 
       pm ->
         merged_content = Map.get(candidate, "content", pm.content)
-        pm |> PersistentMemory.changeset(%{"content" => merged_content}) |> Repo.update()
+        tc = ApiHarness.LLM.TokenCounter.count(merged_content)
+
+        pm
+        |> Ecto.Changeset.change(%{token_count: tc})
+        |> PersistentMemory.changeset(%{"content" => merged_content})
+        |> Repo.update()
     end
   end
 

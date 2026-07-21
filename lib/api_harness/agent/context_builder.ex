@@ -1,5 +1,8 @@
 defmodule ApiHarness.Agent.ContextBuilder do
   @moduledoc """
+  DEPRECATED: Replaced by `ApiHarness.Agent.Context.Runtime` (spec 003).
+  Kept for reference only — not used in the active request path.
+
   Assembles the six-layer prompt for the LLM (FR-022, research §9).
 
   Layer ordering (mapped to OpenAI chat messages):

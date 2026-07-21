@@ -92,7 +92,7 @@ Dev tools available at runtime (development only):
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/002-session-memory-categorization/plan.md` (see also `research.md`,
+`specs/003-context-budget-management/plan.md` (see also `research.md`,
 `data-model.md`, and `quickstart.md` in the same directory). For the original
 foundational feature, see `specs/001-legal-ai-agent-harness/plan.md`.
 <!-- SPECKIT END -->

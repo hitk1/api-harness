@@ -19,6 +19,10 @@ defmodule ApiHarness.Application do
       # DynamicSupervisor) dispatching per-thread jobs onto this Task.Supervisor.
       {Task.Supervisor, name: ApiHarness.Memory.SessionMemory.TaskSupervisor},
       ApiHarness.Memory.SessionMemory.Coordinator,
+      # Context compaction pipeline (spec 003): Registry + DynamicSupervisor for
+      # per-chat compaction workers. Bootstrap re-enqueues interrupted sessions.
+      ApiHarness.Context.Compaction.Registry,
+      ApiHarness.Context.Compaction.Supervisor,
       # Start to serve requests, typically the last entry
       ApiHarnessWeb.Endpoint
     ]
@@ -26,7 +30,9 @@ defmodule ApiHarness.Application do
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: ApiHarness.Supervisor]
-    Supervisor.start_link(children, opts)
+    result = Supervisor.start_link(children, opts)
+    ApiHarness.Context.Compaction.Bootstrap.enqueue_pending()
+    result
   end
 
   # Tell Phoenix to update the endpoint configuration

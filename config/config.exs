@@ -63,6 +63,21 @@ config :api_harness, :agent, recent_messages_window: 10
 # at once (a given chat_id is always processed one turn at a time).
 config :api_harness, :session_memory, topic: "session_memory:updates", max_concurrency: 10
 
+# Context budget management (spec 003). Controls the token budget distribution
+# across context layers and the compaction trigger threshold.
+config :api_harness, :context_budget,
+  context_window: 128_000,
+  output_reserve: 16_384,
+  safety_headroom: 0.02,
+  compaction_threshold: 0.70,
+  rolling_summary_max_tokens: 8_000,
+  provider_proportions: %{
+    domain: 0.10,
+    session: 0.05,
+    memory: 0.15,
+    conversation: 0.70
+  }
+
 # Default JWT signing secret for dev/test. Overridden at runtime from
 # JWT_SECRET (config/runtime.exs) in any environment where it is set.
 config :api_harness,

@@ -4,47 +4,34 @@ defmodule ApiHarness.Agent.Runtime do
 
   Synchronous request path:
     1. Persist user message
-    2. ContextBuilder → 6-layer prompt
-    3. Planner → structured plan (always runs — FR-010-A)
-    4. Executor → runs plan (Coordinator for parallel steps, Tool Registry for tool calls)
+    2. Context.Runtime → 6-layer prompt + context_metrics
+    3. Planner → structured plan
+    4. Executor → runs plan
     5. Persist assistant message
-    6. Return `{:ok, message}`
-
-  After returning, the caller (MessageController) dispatches both async memory
-  pipelines (fire-and-forget — FR-023, SC-002, and spec 002 FR-006): the
-  persistent-memory pipeline, and the categorized session-memory update via
-  `ApiHarness.Memory.SessionMemory.Coordinator.enqueue/4`. Neither pipeline is
-  started here, keeping the response path free of their failures.
+    6. Return {:ok, message, context_metrics}
   """
 
   alias ApiHarness.Accounts.User
-  alias ApiHarness.Agent.{ContextBuilder, Executor, Planner}
+  alias ApiHarness.Agent.{Context.Runtime, Executor, Planner}
   alias ApiHarness.Chats
   alias ApiHarness.Chats.Chat
 
   require Logger
 
-  @doc """
-  Run the full synchronous agent loop for `user`, `chat`, and `question`.
-  Returns `{:ok, assistant_message}` or `{:error, reason}`.
-  """
   @spec run(User.t(), Chat.t(), String.t()) ::
-          {:ok, Chats.Message.t()}
+          {:ok, Chats.Message.t(), map()}
           | {:error, :empty_content | :not_found | :planner_failed | :llm_unavailable}
   def run(%User{} = user, %Chat{} = chat, question) do
     with :ok <- validate_content(question),
          {:ok, _user_msg} <- Chats.add_message(chat, "user", question),
-         messages <- ContextBuilder.build(user, chat, question),
+         {messages, context_metrics} <- Runtime.build(user, chat, question),
          {:ok, steps} <- Planner.plan(messages),
          {:ok, answer} <- Executor.execute(steps, messages),
          {:ok, assistant_msg} <- Chats.add_message(chat, "assistant", answer) do
-      {:ok, assistant_msg}
+      {:ok, assistant_msg, context_metrics}
     else
-      {:error, :planner_failed} ->
-        {:error, :planner_failed}
-
-      {:error, :llm_unavailable} ->
-        {:error, :llm_unavailable}
+      {:error, :planner_failed} -> {:error, :planner_failed}
+      {:error, :llm_unavailable} -> {:error, :llm_unavailable}
 
       {:error, %Ecto.Changeset{} = cs} ->
         Logger.warning("Runtime persist failed: #{inspect(cs.errors)}")

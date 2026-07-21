@@ -55,7 +55,8 @@ defmodule ApiHarness.MixProject do
       {:joken, "~> 2.6"},
       {:bcrypt_elixir, "~> 3.1"},
       {:dotenvy, "~> 0.9"},
-      {:pgvector, "~> 0.3"}
+      {:pgvector, "~> 0.3"},
+      {:tiktoken, "~> 0.4"}
     ]
   end
 

@@ -12,6 +12,7 @@ defmodule ApiHarness.Chats.Message do
   schema "messages" do
     field :role, :string
     field :content, :string
+    field :token_count, :integer, default: 0
 
     belongs_to :chat, Chat
 
