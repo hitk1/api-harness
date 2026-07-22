@@ -46,7 +46,14 @@ defmodule ApiHarness.Agent.Planner do
           %{
             role: "user",
             content:
-              "Based on the above context and question, produce a step-by-step execution plan in JSON. Use type \"answer\" for a direct response, or \"tool\" steps when tools are needed."
+              "Based on the above context and question, produce a JSON execution plan. " <>
+                "Your response must be a JSON object with a single top-level key \"steps\" whose value is an array. " <>
+                "Do NOT echo or describe the schema — produce data that conforms to it. " <>
+                "Use type \"answer\" for a direct response (no tool call needed), " <>
+                "or type \"tool\" when a tool must be invoked before answering. " <>
+                "Minimal examples:\n" <>
+                "  Direct answer: {\"steps\": [{\"type\": \"answer\", \"tool\": null, \"input\": {}, \"parallel\": false}]}\n" <>
+                "  Tool step:     {\"steps\": [{\"type\": \"tool\", \"tool\": \"search_entities\", \"input\": {\"query\": \"..\"}, \"parallel\": false}]}"
           }
         ]
 
